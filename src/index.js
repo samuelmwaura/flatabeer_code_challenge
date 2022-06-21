@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded',onPageLoad); //page loads
 function onPageLoad (){ 
     displayTheFirstBeer()
     getBeerMenu();
+    updateDescription();
 }
 
 //Get the first beer and display its details.
@@ -61,23 +62,72 @@ document.querySelector('#review-form').addEventListener('submit',(e)=>{
     newList.textContent = customerReview;
     newList.addEventListener('click',()=>newList.remove());
     document.getElementById('review-list').appendChild(newList);
-});
+
+    fetch(`http://localhost:3000/beers`)
+    .then(response=>response.json())
+    .then(beers=>{
+        const displayedBeerName = document.getElementById('beer-name').textContent;
+        let sameBeer  = beers.find(element=>{
+            return element.name ===  displayedBeerName // check if the name matches  that of  the currently displayed beer.
+    })
+    sameBeer.reviews.push(customerReview)
+    fetch(`http://localhost:3000/beers/${sameBeer.id}`,{
+        method: 'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({"reviews":sameBeer.reviews})
+    })
+    .then(response=>response.json())
+    .then(data=>console.log(data))
+    .catch(error=>console.log(error))    
+}).catch();
+})
 
 
 //Display a beer in main section
 function displayInMain(event){
-const beerName= event.target.textContent;   //Grab the textcontent of the clicked beer.
-fetch('http://localhost:3000/beers')        //fetch all beers
+const clickedBeerName = event.target.textContent;   //Grab the textcontent of the clicked beer.
+fetch('http://localhost:3000/beers')                //fetch all beers
 .then(response=>response.json())
 .then(beers=>{
-let sameBeer = beers.filter(element=>{
-               return element.name === beerName  // check if the name matches the grabbed one.
-    
+let sameBeer = beers.find(element=>{
+               return element.name === clickedBeerName  // check if the name matches the grabbed one.    
     });
-
     //display in the main section
-    updateBeer(sameBeer[0])             // calling the function to display in main section
+    updateBeer(sameBeer)             // calling the function to display in main section
 })
 .catch(error=>console.log(error))
 
+}
+
+
+//update a description
+function updateDescription(){
+    document.getElementById("description-form").addEventListener('submit',function(event){
+    event.preventDefault()
+    const updatedDescription = document.getElementById('description').value;
+    const currentBeer = document.getElementById('beer-name').textContent
+
+    fetch('http://localhost:3000/beers')
+    .then(response=>response.json())
+    .then(beers=>{  
+    const matchingBeer = beers.find(beer => beer.name === currentBeer);
+
+    matchingBeer.description = updatedDescription;     
+    fetch(`http://localhost:3000/beers/${matchingBeer.id}`,{
+        method: 'PATCH',
+        headers:{
+           'Content-Type':"Application/json",
+           Accept: "Application/json"
+        },
+        body:JSON.stringify({description:matchingBeer.description})
+    })
+    .then(response=>response.json())
+    .then(updatedBeer=>{
+    document.getElementById('beer-description').textContent = updatedBeer.description;
+    })
+    .catch(error=>console.log(error))
+
+    })
+    .catch(error=>console.log(error))
+    });
 }
